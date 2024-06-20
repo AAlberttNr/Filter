@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filter</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .data-list {
+            margin-top: 20px;
+        }
+        .data-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .filter-select, .search-input {
+            margin-bottom: 10px;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .search-button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .search-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Filter</h2>
+        <select id="oblastSelect" class="filter-select">
+            <option value="">Выберите область...</option>
+        </select>
+        <select id="rayonSelect" class="filter-select">
+            <option value="">Выберите район...</option>
+        </select>
+        <input type="text" id="universalInput" class="search-input" placeholder="Поиск по всем полям...">
+        <button id="searchButton" class="search-button">НАЙТИ</button>
+
+        <div class="data-list" id="dataList">
+            <!-- Сюда будут добавлены элементы из JavaScript -->
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script>
+        // Функция для отображения данных
+        function displayData(data) {
+            const dataList = document.getElementById('dataList');
+            dataList.innerHTML = ''; // Очищаем текущий список
+
+            data.forEach(item => {
+                const itemHTML = `
+                    <div class="data-item">
+                        <strong>Область:</strong> ${item.oblast}<br>
+                        <strong>Район:</strong> ${item.rayon}<br>
+                        <strong>Село:</strong> ${item.selo}
+                    </div>
+                `;
+                dataList.innerHTML += itemHTML; // Добавляем элементы в список
+            });
+        }
+
+        // Функция для заполнения выпадающего списка областей
+        function populateOblastSelect(data) {
+            const oblastSelect = document.getElementById('oblastSelect');
+            const oblasts = [...new Set(data.map(item => item.oblast))]; // Получаем уникальные области
+
+            oblasts.forEach(oblast => {
+                const option = document.createElement('option');
+                option.textContent = oblast;
+                option.value = oblast;
+                oblastSelect.appendChild(option);
+            });
+        }
+
+        // Функция для заполнения выпадающего списка районов по выбранной области
+        function populateRayonSelect(oblast, data) {
+            const rayonSelect = document.getElementById('rayonSelect');
+            rayonSelect.innerHTML = '<option value="">Выберите район...</option>'; // Очищаем текущие опции
+
+            const rayons = [...new Set(data.filter(item => item.oblast === oblast).map(item => item.rayon))]; // Получаем уникальные районы для выбранной области
+
+            rayons.forEach(rayon => {
+                const option = document.createElement('option');
+                option.textContent = rayon;
+                option.value = rayon;
+                rayonSelect.appendChild(option);
+            });
+        }
+
+        // Функция для универсального поиска по всем полям
+        function universalSearch(keyword, data) {
+            keyword = keyword.toLowerCase().trim();
+            return data.filter(item =>
+                item.oblast.toLowerCase().includes(keyword) ||
+                item.rayon.toLowerCase().includes(keyword) ||
+                item.selo.toLowerCase().includes(keyword)
+            );
+        }
+
+        // Функция для применения всех фильтров
+        function applyFilters(data) {
+            const oblastSelect = document.getElementById('oblastSelect');
+            const rayonSelect = document.getElementById('rayonSelect');
+            const universalInput = document.getElementById('universalInput');
+
+            let selectedOblast = oblastSelect.value;
+            let selectedRayon = rayonSelect.value;
+            let keyword = universalInput.value.toLowerCase().trim();
+
+            // Сброс выбранных значений в области и районе, если универсальный поиск активен
+            if (keyword && (selectedOblast || selectedRayon)) {
+                oblastSelect.value = '';
+                rayonSelect.value = '';
+                selectedOblast = '';
+                selectedRayon = '';
+            }
+
+            let filteredData = data;
+
+            // Применяем фильтрацию по области, если выбрана область
+            if (selectedOblast) {
+                filteredData = filteredData.filter(item => item.oblast.toLowerCase().includes(selectedOblast.toLowerCase()));
+            }
+
+            // Применяем фильтрацию по району, если выбран район
+            if (selectedRayon) {
+                filteredData = filteredData.filter(item => item.rayon.toLowerCase().includes(selectedRayon.toLowerCase()));
+            }
+
+            // Применяем универсальный поиск
+            if (keyword) {
+                filteredData = filteredData.filter(item =>
+                    item.oblast.toLowerCase().includes(keyword) ||
+                    item.rayon.toLowerCase().includes(keyword) ||
+                    item.selo.toLowerCase().includes(keyword)
+                );
+            }
+
+            displayData(filteredData); // Отображаем результаты фильтрации
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            displayData(data); // Отображаем все данные при загрузке
+            populateOblastSelect(data); // Заполняем выпадающий список областей
+
+            // Обработчик для выбора области
+            document.getElementById('oblastSelect').addEventListener('change', () => {
+                const selectedOblast = document.getElementById('oblastSelect').value;
+                if (selectedOblast) {
+                    populateRayonSelect(selectedOblast, data); // Заполняем список районов для выбранной области
+                } else {
+                    const rayonSelect = document.getElementById('rayonSelect');
+                    rayonSelect.innerHTML = '<option value="">Выберите район...</option>';
+                    applyFilters(data); // Применяем фильтры при изменении области
+                }
+            });
+
+            // Обработчик для выбора района
+            document.getElementById('rayonSelect').addEventListener('change', () => {
+                applyFilters(data); // Применяем фильтры при изменении района
+            });
+
+            // Обработчик для универсального поиска
+            document.getElementById('universalInput').addEventListener('input', () => {
+                applyFilters(data); // Применяем фильтры при изменении универсального поиска
+            });
+
+            // Обработчик для кнопки "НАЙТИ"
+            document.getElementById('searchButton').addEventListener('click', () => {
+                applyFilters(data); // Применяем все фильтры по нажатию на кнопку
+            });
+        });
+    </script>
+</body>
+</html>
